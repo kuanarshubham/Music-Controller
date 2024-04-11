@@ -1,23 +1,39 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
-from .serializer import RoomSerializer
+from .serializer import RoomSerializer, CreateRoomSerializer
 from .models import Room
 from rest_framework.response import Response
 from rest_framework import generics
 
-class RoomView(APIView):
-    # queryset = Room.objects.all()
-    # serializer_class = RoomSerializer 
+permissions.IsAuthenticated()
 
-    def get(self, request):
-        output = [{"id": output.id, "code": output.code, "host": output.host, "guest_can_pause": output.guest_can_pause, 
-                   "votes_to_skip": output.votes_to_skip, "created_at": output.created_at}
-                   for output in Room.objects.all()]
-        return Response(output)
+class RoomView(generics.ListAPIView):
+    queryset = Room.objects.all()
+    serializer_class = RoomSerializer 
 
-    def post(self, request):
-        serializer = RoomSerializer(data = request.data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data)
+class CreateRoomView(APIView):
+    serializer_class = CreateRoomSerializer
+
+    def post(self, request, format=None):
+        if not self.request.session.exists(self.request.session.session_key):
+            self.request.session.create()
+        
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            guest_can_pause = serializer.data.get('guest_can_pause')
+            votes_to_skip = serializer.data.get('votes_to_skip')
+            host = self.request.session.session_key
+            queryset = Room.objects.filter(host=host)
+            if queryset.exists():
+                room = queryset[0]
+                room.guest_can_pause = guest_can_pause
+                room.votes_to_skip = votes_to_skip
+                room.save(update_fields= ['votes_to_skip', 'guest_can_pause'])
+            else:
+                room = Room(host = host, guest_can_pause= guest_can_pause, votes_to_skip= votes_to_skip)
+                room.save()
+
+        return Response(RoomSerializer(room).data, status=status.HTTP_204)
+
+
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Card from './components/Card';
+import Navbar from './components/Navbar';
+import Form from './components/Form';
 
 const App = () => {
   const [data, setData] = useState(null);
@@ -18,17 +20,21 @@ const App = () => {
     };
 
     fetchData();
-  }, [100]); 
+  }, []); 
 
   return (
-    <div>
+    <>
+      <Navbar />
+
       {error && <div>Error: {error.message}</div>}
       {data && data.map(item => {
         return(
           <Card host = {item.host} code = {item.code} />
         )
       })}
-    </div>
+
+      <Form />
+    </>
   );
 };
 
